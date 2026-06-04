@@ -39,9 +39,11 @@ const popup = document.getElementById("popup");
 const confettiLayer = document.getElementById("confetti-layer");
 
 joinBtn.addEventListener("click", joinRoom);
+
 playerNameInput.addEventListener("keydown", event => {
   if (event.key === "Enter") joinRoom();
 });
+
 roomCodeInput.addEventListener("keydown", event => {
   if (event.key === "Enter") joinRoom();
 });
@@ -94,12 +96,27 @@ exchangeBtn.addEventListener("click", () => {
   selectedForExchange.clear();
 });
 
+// Tile Kombat keys. Everyone uses the same controls on their own computer.
+const kombatKeys = new Set(["w", "a", "s", "d", "f", "g", " "]);
+
 window.addEventListener("keydown", event => {
-  keys[event.key.toLowerCase()] = true;
+  const key = event.key.toLowerCase();
+
+  if (latestRoom?.kombat?.active && kombatKeys.has(key)) {
+    event.preventDefault();
+  }
+
+  keys[key] = true;
 });
 
 window.addEventListener("keyup", event => {
-  keys[event.key.toLowerCase()] = false;
+  const key = event.key.toLowerCase();
+
+  if (latestRoom?.kombat?.active && kombatKeys.has(key)) {
+    event.preventDefault();
+  }
+
+  keys[key] = false;
 });
 
 setInterval(() => {
@@ -110,23 +127,15 @@ setInterval(() => {
 
   if (myIndex === -1) return;
 
-  const input = myIndex === 0
-    ? {
-        left: Boolean(keys["a"]),
-        right: Boolean(keys["d"]),
-        jump: Boolean(keys["w"]),
-        block: Boolean(keys["s"]),
-        attack: Boolean(keys["f"]),
-        special: Boolean(keys["g"])
-      }
-    : {
-        left: Boolean(keys["arrowleft"]),
-        right: Boolean(keys["arrowright"]),
-        jump: Boolean(keys["arrowup"]),
-        block: Boolean(keys["arrowdown"]),
-        attack: Boolean(keys["k"]),
-        special: Boolean(keys["l"])
-      };
+  // Online-friendly controls: every player uses the same keys on their own computer.
+  const input = {
+    left: Boolean(keys["a"]),
+    right: Boolean(keys["d"]),
+    jump: Boolean(keys["w"] || keys[" "]),
+    block: Boolean(keys["s"]),
+    attack: Boolean(keys["f"]),
+    special: Boolean(keys["g"])
+  };
 
   socket.emit("kombatInput", { roomCode, input });
 }, 50);
@@ -194,6 +203,8 @@ function renderRoom(room) {
   renderHistory(room.history || []);
   renderKombat(room.kombat);
   renderGameOver(room);
+
+  document.body.classList.toggle("kombat-locked", Boolean(room.kombat?.active));
 
   const isMyTurn = room.currentPlayerId === playerId;
   const gameStarted = room.started;
@@ -299,7 +310,7 @@ function drawKombat(kombat) {
 
   ctx.fillStyle = "rgba(255,255,255,.75)";
   ctx.font = "16px monospace";
-  ctx.fillText("P1: WASD + F/G   P2: ARROWS + K/L", 250, 402);
+  ctx.fillText("EVERYONE: WASD + F/G  (W or SPACE jumps)", 220, 402);
 }
 
 function drawPixelBackground(ctx) {
