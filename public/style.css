@@ -30,6 +30,21 @@ body {
   color: var(--ink);
 }
 
+body.kombat-locked {
+  overflow: hidden;
+}
+
+body.kombat-locked .kombat-stage-panel {
+  position: sticky;
+  top: 12px;
+  z-index: 50;
+}
+
+body.kombat-locked #kombat-canvas {
+  outline: 4px solid rgba(242, 214, 122, .65);
+  outline-offset: 4px;
+}
+
 .app-shell {
   max-width: 1280px;
   margin: 0 auto;
@@ -579,20 +594,4 @@ button:disabled {
   .sidebar {
     position: static;
   }
-}
-
-
-body.kombat-locked {
-  overflow: hidden;
-}
-
-body.kombat-locked .kombat-stage-panel {
-  position: sticky;
-  top: 12px;
-  z-index: 50;
-}
-
-body.kombat-locked #kombat-canvas {
-  outline: 4px solid rgba(242, 214, 122, .65);
-  outline-offset: 4px;
 }
