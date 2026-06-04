@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Word Tile Night</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="app-shell">
+    <section class="hero">
+      <div>
+        <p class="eyebrow">Multiplayer word tile game</p>
+        <h1>Word Tile Night</h1>
+        <p class="subtitle">Build valid CWL words. Settle first turn in Tile Kombat.</p>
+      </div>
+    </section>
+
+    <section id="join-screen" class="panel join-panel">
+      <label>
+        Your name
+        <input id="player-name" placeholder="Calvin">
+      </label>
+
+      <label>
+        Room code
+        <input id="room-code" placeholder="GAME1">
+      </label>
+
+      <button id="join-btn" class="primary-btn">Join Room</button>
+      <p class="hint">Use the same room code as your friends.</p>
+    </section>
+
+    <section id="game-screen" class="hidden">
+      <div class="game-layout">
+        <aside class="sidebar panel">
+          <div class="room-info">
+            <div>
+              <span class="label">Room</span>
+              <strong id="room-label">—</strong>
+            </div>
+            <div>
+              <span class="label">Tiles left</span>
+              <strong id="tiles-left">—</strong>
+            </div>
+            <div>
+              <span class="label">Dictionary</span>
+              <strong id="dictionary-size">—</strong>
+            </div>
+          </div>
+
+          <div class="lobby-actions">
+            <button id="kombat-btn">Start Tile Kombat</button>
+            <button id="start-btn" class="primary-btn">Start Word Game</button>
+          </div>
+
+          <div id="fighter-select" class="fighter-select">
+            <h3>Choose Fighter</h3>
+            <div class="fighter-buttons">
+              <button data-fighter="bingoGoblin">Bingo Goblin</button>
+              <button data-fighter="professorQ">Professor Q</button>
+              <button data-fighter="vowelWitch">Vowel Witch</button>
+              <button data-fighter="tripleTroll">Triple Word Troll</button>
+            </div>
+          </div>
+
+          <h2>Players</h2>
+          <div id="players"></div>
+
+          <div id="message" class="message">Waiting for players.</div>
+
+          <div class="letter-count-panel">
+            <h3>Letters Not on Board</h3>
+            <p class="letter-count-note">Includes tiles in the bag and in players' racks.</p>
+            <div id="letter-counts" class="letter-counts"></div>
+          </div>
+
+          <div id="game-over-panel" class="game-over-panel hidden"></div>
+
+          <div class="history-panel">
+            <h3>Word History</h3>
+            <div id="history-list" class="history-list"></div>
+          </div>
+
+          <div class="rules-card">
+            <h3>Controls</h3>
+            <p><strong>Tile Kombat:</strong> Everyone uses A/D move, W or Space jump, S block, F punch, G special.</p>
+            <p>Controls work because each player is on their own computer.</p>
+            <p><strong>Word Game:</strong> Drag tiles onto the board. Click rack tiles to select for exchange.</p>
+          </div>
+        </aside>
+
+        <section class="board-area">
+          <div id="kombat-stage-panel" class="kombat-stage-panel panel hidden">
+            <div class="kombat-header">
+              <h2>Tile Kombat</h2>
+              <div id="kombat-status">Choose fighters, then start.</div>
+            </div>
+            <canvas id="kombat-canvas" width="860" height="420"></canvas>
+            <div id="kombat-choice" class="kombat-choice hidden"></div>
+            <div id="kombat-log" class="kombat-log"></div>
+          </div>
+
+          <div id="board" class="board"></div>
+
+          <div class="rack-panel panel">
+            <div class="rack-header">
+              <h2>Your Rack</h2>
+              <div class="action-buttons">
+                <button id="exchange-btn">Exchange Selected</button>
+                <button id="recall-btn">Recall Tiles</button>
+                <button id="pass-btn">Pass</button>
+                <button id="submit-btn" class="primary-btn">Submit Turn</button>
+              </div>
+            </div>
+
+            <p class="exchange-hint">Click rack tiles to select them for exchange. Drag tiles to the board to play them.</p>
+            <div id="rack" class="rack"></div>
+          </div>
+        </section>
+      </div>
+    </section>
+  </main>
+
+  <div id="popup" class="popup hidden"></div>
+  <div id="confetti-layer" class="confetti-layer"></div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
