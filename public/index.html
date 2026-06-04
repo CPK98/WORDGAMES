@@ -48,7 +48,12 @@
             </div>
           </div>
 
-          <button id="start-btn" class="primary-btn">Start Game</button>
+          <div class="lobby-actions">
+            <button id="battle-btn">Start First-Turn Fight</button>
+            <button id="start-btn" class="primary-btn">Start Game</button>
+          </div>
+
+          <div id="battle-panel" class="battle-panel hidden"></div>
 
           <h2>Players</h2>
           <div id="players"></div>
@@ -62,6 +67,11 @@
           </div>
 
           <div id="game-over-panel" class="game-over-panel hidden"></div>
+
+          <div class="history-panel">
+            <h3>Word History</h3>
+            <div id="history-list" class="history-list"></div>
+          </div>
 
           <div class="rules-card">
             <h3>Current rules</h3>
@@ -91,6 +101,9 @@
       </div>
     </section>
   </main>
+
+  <div id="popup" class="popup hidden"></div>
+  <div id="confetti-layer" class="confetti-layer"></div>
 
   <script src="/socket.io/socket.io.js"></script>
   <script src="app.js"></script>

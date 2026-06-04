@@ -82,3 +82,24 @@ This shows the number of each physical tile that has not been placed on the boar
 - in your rack
 
 Placed blank tiles reduce the `Blank` count, even if the blank is representing another letter.
+
+
+## Fun Features Added
+
+### Bingo Warning
+
+After a player submits a turn, the server checks whether their full 7-tile rack had at least one valid 7-letter word before they played. If they did not use all 7 tiles, only that player sees:
+
+> You had bingo, ya dingus
+
+### Bingo Confetti
+
+If a player uses all 7 rack tiles in one move, everyone sees a popup and confetti.
+
+### Word History
+
+The sidebar now keeps a recent history of plays, exchanges, and passes.
+
+### First-Turn Pixel Fight
+
+Before starting the game, click **Start First-Turn Fight**. Players mash **Attack!** in a goofy mini-fight. The winner chooses whether to go first or second, then the game can start.

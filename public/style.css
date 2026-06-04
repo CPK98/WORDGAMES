@@ -443,3 +443,142 @@ button:disabled {
   color: var(--muted);
   font-weight: 800;
 }
+
+
+.lobby-actions {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.battle-panel {
+  background: #22182c;
+  border: 3px solid #6f4aa8;
+  color: white;
+  border-radius: 14px;
+  padding: 12px;
+  margin-bottom: 14px;
+  box-shadow: inset 0 0 0 3px rgba(255,255,255,.08);
+}
+
+.battle-panel h3 {
+  margin: 0 0 8px;
+}
+
+.battle-arena {
+  display: grid;
+  gap: 8px;
+  margin: 10px 0;
+}
+
+.fighter-row {
+  background: rgba(255,255,255,.09);
+  border-radius: 10px;
+  padding: 8px;
+}
+
+.fighter-name {
+  display: flex;
+  justify-content: space-between;
+  font-weight: 900;
+  margin-bottom: 5px;
+}
+
+.hp-track {
+  height: 12px;
+  border-radius: 99px;
+  background: rgba(255,255,255,.18);
+  overflow: hidden;
+}
+
+.hp-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #6ee36e, #ffd35c, #f05a5a);
+  width: 100%;
+}
+
+.battle-log {
+  font-size: 12px;
+  color: #d7c8ff;
+  margin: 8px 0 0;
+  padding-left: 18px;
+}
+
+.choice-buttons {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.history-panel {
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 12px;
+  margin-bottom: 14px;
+}
+
+.history-panel h3 {
+  margin: 0 0 8px;
+}
+
+.history-list {
+  display: grid;
+  gap: 8px;
+  max-height: 220px;
+  overflow: auto;
+}
+
+.history-item {
+  border-bottom: 1px solid #f0dfc4;
+  padding-bottom: 7px;
+  font-size: 13px;
+}
+
+.history-item:last-child {
+  border-bottom: none;
+}
+
+.history-score {
+  font-weight: 950;
+  color: var(--accent);
+}
+
+.popup {
+  position: fixed;
+  left: 50%;
+  top: 24px;
+  transform: translateX(-50%);
+  z-index: 9999;
+  background: #241b13;
+  color: white;
+  border: 3px solid #f2b84b;
+  border-radius: 16px;
+  padding: 16px 22px;
+  font-size: 22px;
+  font-weight: 950;
+  box-shadow: 0 20px 60px rgba(0,0,0,.28);
+  text-align: center;
+}
+
+.confetti-layer {
+  pointer-events: none;
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  z-index: 9998;
+}
+
+.confetti-piece {
+  position: absolute;
+  top: -20px;
+  width: 10px;
+  height: 16px;
+  animation: confetti-fall 2.6s linear forwards;
+}
+
+@keyframes confetti-fall {
+  0% { transform: translateY(-20px) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(110vh) rotate(720deg); opacity: 0; }
+}

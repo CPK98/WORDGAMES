@@ -1,7 +1,7 @@
 {
-  "name": "word-tile-night-endgame-exchange",
-  "version": "4.0.0",
-  "description": "A multiplayer word tile game with CWL validation, tile exchange, and end-game scoring",
+  "name": "word-tile-night-fun-features",
+  "version": "5.0.0",
+  "description": "A multiplayer word tile game with CWL validation, bingo alerts, word history, and a pixel fight lobby",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"

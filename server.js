@@ -15,6 +15,7 @@ const rooms = {};
 
 const WORD_LIST_PATH = path.join(__dirname, "data", "cwl.txt");
 const WORD_SET = loadWordList();
+const SEVEN_LETTER_WORDS = [...WORD_SET].filter(word => word.length === 7);
 
 function loadWordList() {
   if (!fs.existsSync(WORD_LIST_PATH)) {
@@ -113,6 +114,58 @@ function drawTiles(room, player) {
   }
 }
 
+function createBattleState() {
+  return {
+    active: false,
+    finished: false,
+    winnerId: null,
+    winnerName: "",
+    fighters: {},
+    log: [],
+    startedAt: null
+  };
+}
+
+function addHistory(room, item) {
+  room.history.unshift({
+    id: cryptoId(),
+    time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+    ...item
+  });
+
+  room.history = room.history.slice(0, 20);
+}
+
+function canRackMakeSevenLetterWord(rack) {
+  if (!rack || rack.length !== 7 || SEVEN_LETTER_WORDS.length === 0) return false;
+
+  const counts = {};
+  let blanks = 0;
+
+  for (const tile of rack) {
+    if (tile.isBlank || tile.letter === "?") {
+      blanks += 1;
+    } else {
+      counts[tile.letter] = (counts[tile.letter] || 0) + 1;
+    }
+  }
+
+  for (const word of SEVEN_LETTER_WORDS) {
+    const needed = {};
+    for (const letter of word) needed[letter] = (needed[letter] || 0) + 1;
+
+    let missing = 0;
+    for (const letter in needed) {
+      missing += Math.max(0, needed[letter] - (counts[letter] || 0));
+      if (missing > blanks) break;
+    }
+
+    if (missing <= blanks) return true;
+  }
+
+  return false;
+}
+
 function createRoom(roomCode) {
   rooms[roomCode] = {
     code: roomCode,
@@ -124,6 +177,9 @@ function createRoom(roomCode) {
     currentTurnIndex: 0,
     pendingMoves: {},
     consecutivePasses: 0,
+    history: [],
+    battle: createBattleState(),
+    firstTurnChoice: null,
     lastMessage: `Waiting for players. Dictionary loaded: ${WORD_SET.size.toLocaleString()} words.`,
     gameOverSummary: null
   };
@@ -158,7 +214,28 @@ function getPublicRoomState(room) {
     letterCountsNotOnBoard: getLetterCountsNotOnBoard(room),
     lastMessage: room.lastMessage,
     dictionarySize: WORD_SET.size,
+    history: room.history,
+    battle: getPublicBattleState(room),
+    firstTurnChoice: room.firstTurnChoice,
     gameOverSummary: room.gameOverSummary
+  };
+}
+
+function getPublicBattleState(room) {
+  const battle = room.battle || createBattleState();
+
+  return {
+    active: battle.active,
+    finished: battle.finished,
+    winnerId: battle.winnerId,
+    winnerName: battle.winnerName,
+    fighters: Object.values(battle.fighters || {}).map(fighter => ({
+      id: fighter.id,
+      name: fighter.name,
+      hp: fighter.hp,
+      alive: fighter.alive
+    })),
+    log: battle.log.slice(0, 6)
   };
 }
 
@@ -564,6 +641,7 @@ io.on("connection", socket => {
 
     room.started = true;
     room.gameOver = false;
+    room.battle.active = false;
     room.lastMessage = "Game started! First player begins.";
 
     for (const player of room.players) {
@@ -653,6 +731,7 @@ io.on("connection", socket => {
       return;
     }
 
+    const hadBingoAvailable = canRackMakeSevenLetterWord(player.rack);
     const validation = validateMove(room, socket.id);
 
     if (!validation.ok) {
@@ -678,6 +757,24 @@ io.on("connection", socket => {
 
     room.consecutivePasses = 0;
     room.lastMessage = `${player.name} scored ${result.total}: ${wordText}`;
+
+    addHistory(room, {
+      type: "play",
+      player: player.name,
+      text: `${player.name}: ${wordText}`,
+      score: result.total
+    });
+
+    if (hadBingoAvailable && moves.length < 7) {
+      io.to(player.id).emit("bingoMissed", { message: "You had bingo, ya dingus" });
+    }
+
+    if (moves.length === 7) {
+      io.to(room.code).emit("bingoPlayed", {
+        playerName: player.name,
+        message: `${player.name} played all 7 tiles!`
+      });
+    }
 
     if (room.bag.length === 0 && player.rack.length === 0) {
       finishGame(room, `${player.name} used all their tiles with no tiles left in the bag.`, player);
@@ -732,6 +829,12 @@ io.on("connection", socket => {
     room.bag = shuffle([...room.bag, ...returning]);
     room.consecutivePasses = 0;
     room.lastMessage = `${player.name} exchanged ${exchangedCount} tile${exchangedCount === 1 ? "" : "s"} and lost their turn.`;
+    addHistory(room, {
+      type: "exchange",
+      player: player.name,
+      text: `${player.name} exchanged ${exchangedCount} tile${exchangedCount === 1 ? "" : "s"}.`,
+      score: null
+    });
 
     advanceTurn(room);
     emitRoom(room);
@@ -748,6 +851,12 @@ io.on("connection", socket => {
 
     room.consecutivePasses += 1;
     room.lastMessage = `${currentPlayer.name} passed.`;
+    addHistory(room, {
+      type: "pass",
+      player: currentPlayer.name,
+      text: `${currentPlayer.name} passed.`,
+      score: null
+    });
 
     // Optional practical end condition: if everyone passes twice in a row and the bag is empty, end the game.
     if (room.bag.length === 0 && room.consecutivePasses >= room.players.length * 2) {
@@ -757,6 +866,103 @@ io.on("connection", socket => {
     }
 
     advanceTurn(room);
+    emitRoom(room);
+  });
+
+  socket.on("startBattle", ({ roomCode }) => {
+    const room = rooms[roomCode];
+    if (!room || room.started || room.gameOver) return;
+
+    if (room.players.length < 2) {
+      socket.emit("errorMessage", "You need at least 2 players for the first-turn fight.");
+      return;
+    }
+
+    room.battle = createBattleState();
+    room.battle.active = true;
+    room.battle.finished = false;
+    room.battle.startedAt = Date.now();
+    room.battle.log.unshift("The pixel fight begins!");
+
+    for (const player of room.players) {
+      room.battle.fighters[player.id] = {
+        id: player.id,
+        name: player.name,
+        hp: 100,
+        alive: true,
+        lastAttack: 0
+      };
+    }
+
+    room.lastMessage = "First-turn pixel fight started! Mash Attack until one fighter remains.";
+    emitRoom(room);
+  });
+
+  socket.on("battleAttack", ({ roomCode }) => {
+    const room = rooms[roomCode];
+    if (!room || !room.battle || !room.battle.active || room.battle.finished) return;
+
+    const fighter = room.battle.fighters[socket.id];
+    if (!fighter || !fighter.alive) return;
+
+    const now = Date.now();
+    if (now - fighter.lastAttack < 650) {
+      socket.emit("errorMessage", "Your fighter needs a split second to recover!");
+      return;
+    }
+
+    fighter.lastAttack = now;
+
+    const opponents = Object.values(room.battle.fighters).filter(item => item.id !== socket.id && item.alive);
+    if (opponents.length === 0) return;
+
+    const target = opponents[Math.floor(Math.random() * opponents.length)];
+    const damage = Math.floor(Math.random() * 10) + 8;
+
+    target.hp = Math.max(0, target.hp - damage);
+    room.battle.log.unshift(`${fighter.name} bonked ${target.name} for ${damage}.`);
+
+    if (target.hp <= 0) {
+      target.alive = false;
+      room.battle.log.unshift(`${target.name} has been dramatically pixel-punched out.`);
+    }
+
+    const alive = Object.values(room.battle.fighters).filter(item => item.alive);
+
+    if (alive.length === 1) {
+      const winner = alive[0];
+      room.battle.active = false;
+      room.battle.finished = true;
+      room.battle.winnerId = winner.id;
+      room.battle.winnerName = winner.name;
+      room.lastMessage = `${winner.name} won the pixel fight! They choose whether to go first or second.`;
+    }
+
+    emitRoom(room);
+  });
+
+  socket.on("chooseTurnOrder", ({ roomCode, choice }) => {
+    const room = rooms[roomCode];
+    if (!room || room.started || !room.battle || !room.battle.finished) return;
+
+    const winnerId = room.battle.winnerId;
+    if (socket.id !== winnerId) {
+      socket.emit("errorMessage", "Only the pixel fight winner can choose.");
+      return;
+    }
+
+    const winnerIndex = room.players.findIndex(player => player.id === winnerId);
+    if (winnerIndex === -1) return;
+
+    if (choice === "second") {
+      room.currentTurnIndex = (winnerIndex + 1) % room.players.length;
+      room.firstTurnChoice = `${room.players[winnerIndex].name} chose to go second.`;
+    } else {
+      room.currentTurnIndex = winnerIndex;
+      room.firstTurnChoice = `${room.players[winnerIndex].name} chose to go first.`;
+    }
+
+    room.lastMessage = `${room.firstTurnChoice} Click Start Game when ready.`;
     emitRoom(room);
   });
 

@@ -25,6 +25,11 @@ const recallBtn = document.getElementById("recall-btn");
 const exchangeBtn = document.getElementById("exchange-btn");
 const gameOverPanel = document.getElementById("game-over-panel");
 const letterCountsDiv = document.getElementById("letter-counts");
+const historyList = document.getElementById("history-list");
+const battleBtn = document.getElementById("battle-btn");
+const battlePanel = document.getElementById("battle-panel");
+const popup = document.getElementById("popup");
+const confettiLayer = document.getElementById("confetti-layer");
 
 joinBtn.addEventListener("click", joinRoom);
 playerNameInput.addEventListener("keydown", event => {
@@ -48,6 +53,10 @@ passBtn.addEventListener("click", () => {
 
 recallBtn.addEventListener("click", () => {
   socket.emit("recallTiles", { roomCode });
+});
+
+battleBtn.addEventListener("click", () => {
+  socket.emit("startBattle", { roomCode });
 });
 
 exchangeBtn.addEventListener("click", () => {
@@ -113,6 +122,15 @@ socket.on("errorMessage", message => {
   showMessage(message);
 });
 
+socket.on("bingoMissed", data => {
+  showPopup(data.message || "You had bingo, ya dingus");
+});
+
+socket.on("bingoPlayed", data => {
+  showPopup(data.message || "Bingo!");
+  launchConfetti();
+});
+
 function renderRoom(room) {
   roomLabel.textContent = room.code;
   tilesLeft.textContent = room.tilesLeft;
@@ -121,6 +139,8 @@ function renderRoom(room) {
   renderPlayers(room.players);
   renderBoard(room);
   renderLetterCounts(room.letterCountsNotOnBoard);
+  renderHistory(room.history || []);
+  renderBattle(room.battle);
   renderGameOver(room);
 
   const isMyTurn = room.currentPlayerId === playerId;
@@ -128,6 +148,7 @@ function renderRoom(room) {
   const gameOver = room.gameOver;
 
   startBtn.disabled = gameStarted;
+  battleBtn.disabled = gameStarted || gameOver || (room.battle && room.battle.active);
   submitBtn.disabled = !gameStarted || !isMyTurn || gameOver;
   passBtn.disabled = !gameStarted || !isMyTurn || gameOver;
   recallBtn.disabled = !gameStarted || !isMyTurn || gameOver;
@@ -155,6 +176,87 @@ function renderPlayers(players) {
 
     playersDiv.appendChild(card);
   });
+}
+
+function renderHistory(history) {
+  if (!history || history.length === 0) {
+    historyList.innerHTML = `<div class="history-item">No plays yet.</div>`;
+    return;
+  }
+
+  historyList.innerHTML = history
+    .map(item => `
+      <div class="history-item">
+        <div>${escapeHTML(item.time || "")} — ${escapeHTML(item.text || "")}</div>
+        ${item.score !== null && item.score !== undefined ? `<div class="history-score">+${item.score}</div>` : ""}
+      </div>
+    `)
+    .join("");
+}
+
+function renderBattle(battle) {
+  if (!battle || (!battle.active && !battle.finished)) {
+    battlePanel.classList.add("hidden");
+    battlePanel.innerHTML = "";
+    return;
+  }
+
+  const fighters = battle.fighters || [];
+  const fighterHtml = fighters.map(fighter => `
+    <div class="fighter-row">
+      <div class="fighter-name">
+        <span>${escapeHTML(fighter.name)} ${fighter.alive ? "🥊" : "💀"}</span>
+        <span>${fighter.hp} HP</span>
+      </div>
+      <div class="hp-track">
+        <div class="hp-fill" style="width:${Math.max(0, fighter.hp)}%"></div>
+      </div>
+    </div>
+  `).join("");
+
+  const logHtml = (battle.log || []).map(line => `<li>${escapeHTML(line)}</li>`).join("");
+
+  let actions = "";
+
+  if (battle.active) {
+    actions = `<button id="attack-btn" class="primary-btn">Attack!</button>`;
+  }
+
+  if (battle.finished && battle.winnerId === playerId && !latestRoom.started) {
+    actions = `
+      <div class="choice-buttons">
+        <button id="choose-first-btn" class="primary-btn">I want to go first</button>
+        <button id="choose-second-btn">I want to go second</button>
+      </div>
+    `;
+  }
+
+  if (battle.finished && battle.winnerId !== playerId) {
+    actions = `<p>${escapeHTML(battle.winnerName)} chooses who starts.</p>`;
+  }
+
+  battlePanel.classList.remove("hidden");
+  battlePanel.innerHTML = `
+    <h3>Pixel Street Fight</h3>
+    <div class="battle-arena">${fighterHtml}</div>
+    ${actions}
+    <ul class="battle-log">${logHtml}</ul>
+  `;
+
+  const attackBtn = document.getElementById("attack-btn");
+  if (attackBtn) {
+    attackBtn.addEventListener("click", () => socket.emit("battleAttack", { roomCode }));
+  }
+
+  const chooseFirstBtn = document.getElementById("choose-first-btn");
+  if (chooseFirstBtn) {
+    chooseFirstBtn.addEventListener("click", () => socket.emit("chooseTurnOrder", { roomCode, choice: "first" }));
+  }
+
+  const chooseSecondBtn = document.getElementById("choose-second-btn");
+  if (chooseSecondBtn) {
+    chooseSecondBtn.addEventListener("click", () => socket.emit("chooseTurnOrder", { roomCode, choice: "second" }));
+  }
 }
 
 function renderLetterCounts(counts) {
@@ -350,6 +452,27 @@ function bonusLabel(bonus) {
 
 function showMessage(message) {
   messageDiv.textContent = message;
+}
+
+function showPopup(message) {
+  popup.textContent = message;
+  popup.classList.remove("hidden");
+
+  setTimeout(() => popup.classList.add("hidden"), 3200);
+}
+
+function launchConfetti() {
+  const colours = ["#d84b5f", "#f2b84b", "#3f72d8", "#1e6f5c", "#8fc7f2", "#f5a3ad"];
+
+  for (let i = 0; i < 120; i++) {
+    const piece = document.createElement("div");
+    piece.className = "confetti-piece";
+    piece.style.left = `${Math.random() * 100}%`;
+    piece.style.background = colours[Math.floor(Math.random() * colours.length)];
+    piece.style.animationDelay = `${Math.random() * 0.5}s`;
+    confettiLayer.appendChild(piece);
+    setTimeout(() => piece.remove(), 3200);
+  }
 }
 
 function escapeHTML(value) {
